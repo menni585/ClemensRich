@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full bg-slate-950 text-slate-100 selection:bg-blue-600 selection:text-white">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PayPal Simulation & Live Dashboard</title>
+  
+  <!-- Tailwind CSS & Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            paypal: {
+              blue: '#003087',
+              cyan: '#0070ba',
+              light: '#0079C1',
+              dark: '#001C64'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
+    }
+    input, textarea {
+      user-select: text;
+    }
+    .touch-btn {
+      min-height: 52px;
+      min-width: 52px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(0, 112, 186, 0.4); }
+      50% { box-shadow: 0 0 35px rgba(0, 112, 186, 0.8); }
+    }
+    .glow-effect {
+      animation: pulse-glow 3s infinite;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans bg-slate-950 text-slate-100 pb-28 md:pb-0 overflow-x-hidden">
+
+  <header class="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-4 py-3.5">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="bg-blue-600 rounded-2xl p-3 text-white flex items-center justify-center shadow-lg shadow-blue-500/30">
+          <i class="fa-brands fa-paypal text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="font-extrabold text-base md:text-lg leading-tight tracking-tight text-white flex items-center gap-2">
+            PayPal Pro
+            <span class="text-xs bg-emerald-500/20 text-emerald-400 font-semibold px-2.5 py-0.5 rounded-full border border-emerald-500/30">Verified</span>
+          </h1>
+          <p class="text-xs text-slate-400">Verifiziertes Konto & Live Studio</p>
+        </div>
+      </div>
+
+      <!-- Balance Pill Top -->
+      <div class="bg-slate-800/90 border border-slate-700/80 rounded-full px-5 py-2 flex items-center gap-2 shadow-inner">
+        <span class="text-xs text-slate-400 font-medium">Guthaben:</span>
+        <span id="header-balance" class="font-extrabold text-emerald-400 text-sm md:text-base">12.450,00 €</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 space-y-8">
+
+    <!-- DASHBOARD TAB -->
+    <section id="tab-dashboard" class="tab-content space-y-6">
+      <div class="bg-gradient-to-br from-slate-900 via-blue-950/50 to-slate-900 border border-blue-500/30 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-2xl glow-effect">
+        <div class="absolute top-0 right-0 p-8 opacity-10 text-blue-400 pointer-events-none">
+          <i class="fa-brands fa-paypal text-9xl"></i>
+        </div>
+        
+        <div class="relative z-10 space-y-5">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-semibold tracking-wider text-slate-400 uppercase">PayPal-Gesamtguthaben</span>
+            <button onclick="openMoneyModal()" class="touch-btn text-xs bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 font-semibold px-4 py-2 rounded-2xl border border-blue-500/40 transition">
+              <i class="fa-solid fa-plus-circle mr-1.5"></i> Guthaben aufladen
+            </button>
+          </div>
+
+          <div class="text-4xl sm:text-6xl font-black text-white tracking-tight" id="main-balance">
+            12.450,00 €
+          </div>
+
+          <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 pt-2">
+            <button onclick="switchTab('clothing')" class="touch-btn bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl px-5 text-sm shadow-lg shadow-blue-600/30 transition active:scale-95 flex items-center justify-center">
+              <i class="fa-solid fa-shirt mr-2"></i> Verkaufen
+            </button>
+            <button onclick="switchTab('garage')" class="touch-btn bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold rounded-2xl px-5 text-sm border border-slate-700 transition active:scale-95 flex items-center justify-center">
+              <i class="fa-solid fa-car mr-2"></i> Autohaus
+            </button>
+            <button onclick="switchTab('live')" class="touch-btn bg-red-600 hover:bg-red-500 text-white font-bold rounded-2xl px-5 text-sm shadow-lg shadow-red-600/30 transition active:scale-95 flex items-center justify-center">
+              <i class="fa-solid fa-video mr-2"></i> Live-Stream
+            </button>
+            <button onclick="switchTab('ai')" class="touch-btn bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-2xl px-5 text-sm shadow-lg shadow-purple-600/30 transition active:scale-95 flex items-center justify-center">
+              <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> AI Advisor
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between shadow-lg">
+          <span class="text-xs text-slate-400 font-medium">Verkaufte Artikel</span>
+          <span id="stat-sold-count" class="text-2xl font-black text-slate-100 mt-2">14</span>
+        </div>
+        <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between shadow-lg">
+          <span class="text-xs text-slate-400 font-medium">Autos in Garage</span>
+          <span id="stat-cars-count" class="text-2xl font-black text-slate-100 mt-2">2</span>
+        </div>
+        <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between shadow-lg">
+          <span class="text-xs text-slate-400 font-medium">Live-Einnahmen</span>
+          <span id="stat-donations-total" class="text-2xl font-black text-emerald-400 mt-2">850,00 €</span>
+        </div>
+        <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between shadow-lg">
+          <span class="text-xs text-slate-400 font-medium">Konto-Status</span>
+          <span class="text-xs font-bold text-emerald-400 mt-3 flex items-center gap-1.5 bg-emerald-500/10 px-3 py-1 rounded-xl w-fit border border-emerald-500/20">
+            <i class="fa-solid fa-shield-halved"></i> VIP Premium
+          </span>
+        </div>
+      </div>
+
+      <!-- Activity List -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3.5">
+          <h2 class="font-bold text-slate-200 text-base flex items-center gap-2">
+            <i class="fa-solid fa-clock-rotate-left text-blue-400"></i> Letzte Aktivitäten
+          </h2>
+          <span class="text-xs text-slate-500">Live Synchronisiert</span>
+        </div>
+        <div id="activity-list" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <!-- CLOTHING TAB -->
+    <section id="tab-clothing" class="tab-content space-y-6 hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-black text-white flex items-center gap-2">
+            <i class="fa-solid fa-tag text-blue-500"></i> Klamotten-Marketplace
+          </h2>
+          <p class="text-xs text-slate-400">Stelle Luxusartikel ein – reale Käufer kaufen diese automatisch in 30–60 Sekunden ab!</p>
+        </div>
+        <button onclick="openSellModal()" class="touch-btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 rounded-2xl shadow-lg shadow-emerald-600/30 transition active:scale-95 text-sm">
+          <i class="fa-solid fa-plus mr-2"></i> Artikel einstellen
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider">Deine aktiven Angebote</h3>
+        <div id="clothing-items-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+    </section>
+
+    <!-- GARAGE / AUTOHAUS TAB -->
+    <section id="tab-garage" class="tab-content space-y-6 hidden">
+      <div class="flex border-b border-slate-800">
+        <button id="subtab-btn-shop" onclick="switchCarSubtab('shop')" class="touch-btn text-sm font-bold px-6 py-3 border-b-2 border-blue-500 text-blue-400 flex-1 sm:flex-none">
+          <i class="fa-solid fa-store mr-2"></i> Autohaus (Kaufen)
+        </button>
+        <button id="subtab-btn-mine" onclick="switchCarSubtab('mine')" class="touch-btn text-sm font-bold px-6 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex-1 sm:flex-none">
+          <i class="fa-solid fa-warehouse mr-2"></i> Meine Garage (<span id="garage-count-badge">2</span>)
+        </button>
+      </div>
+
+      <div id="car-subtab-shop" class="space-y-4">
+        <div id="cars-dealership-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+
+      <div id="car-subtab-mine" class="space-y-4 hidden">
+        <div id="user-garage-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+    </section>
+
+    <!-- STREAMING TAB WITH MASSIVE CHAT BOX -->
+    <section id="tab-live" class="tab-content space-y-6 hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Stream Display Column -->
+        <div class="lg:col-span-2 space-y-4">
+          <div class="relative bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden aspect-video shadow-2xl flex flex-col justify-between p-6">
+            <div id="live-screen-bg" class="absolute inset-0 bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-6 text-center">
+              <div id="live-status-icon" class="w-20 h-20 rounded-full bg-red-600/20 text-red-500 border border-red-500/40 flex items-center justify-center text-3xl mb-4 animate-pulse">
+                <i class="fa-solid fa-broadcast-tower"></i>
+              </div>
+              <h3 id="live-screen-title" class="text-xl font-black text-white">Stream ist offline</h3>
+              <p id="live-screen-desc" class="text-xs text-slate-400 max-w-md mt-1">Starte jetzt den Live-Stream, um deinen Chat mit echten Usern und automatischen Spenden zu aktivieren!</p>
+            </div>
+
+            <div class="relative z-10 flex items-center justify-between">
+              <div id="live-badge" class="hidden items-center gap-2 bg-red-600 text-white font-black text-xs px-3.5 py-1.5 rounded-full shadow-lg animate-pulse">
+                <span class="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span> LIVE
+              </div>
+              <div id="viewer-badge" class="hidden items-center gap-2 bg-slate-900/85 backdrop-blur-md text-slate-200 text-xs font-bold px-3.5 py-1.5 rounded-full border border-slate-700">
+                <i class="fa-solid fa-eye text-red-400"></i> <span id="viewer-count">1.420</span> Zuschauer
+              </div>
+            </div>
+
+            <!-- Donation SuperChat Alert Overlay -->
+            <div id="donation-alert" class="relative z-20 hidden bg-gradient-to-r from-amber-500 to-emerald-500 text-slate-950 font-black p-4 rounded-2xl shadow-2xl transform scale-95 transition duration-300 flex items-center gap-3">
+              <div class="bg-slate-950 text-amber-400 p-3 rounded-xl text-xl">
+                <i class="fa-solid fa-euro-sign"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div id="alert-username" class="text-xs uppercase tracking-wider text-slate-900 opacity-90 font-black">GamerBoy_99</div>
+                <div id="alert-amount" class="text-lg leading-tight font-extrabold text-slate-950">spendet 25,00 €!</div>
+                <p id="alert-message" class="text-xs truncate italic text-slate-900 font-semibold">"Satter Sound bro!"</p>
+              </div>
+            </div>
+
+            <div class="relative z-10 flex items-center justify-between">
+              <div class="text-xs font-bold bg-slate-900/85 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-800 text-slate-300 shadow">
+                Stream Einnahmen: <span id="session-donations-total" class="text-emerald-400 font-extrabold">0,00 €</span>
+              </div>
+              <button id="toggle-live-btn" onclick="toggleLiveStream()" class="touch-btn bg-red-600 hover:bg-red-500 text-white font-extrabold px-7 rounded-2xl text-sm shadow-lg shadow-red-600/40 active:scale-95 transition">
+                Live Gehen
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fully Accessible Large Live Chat Box Column -->
+        <div class="bg-slate-900/95 border border-slate-800 rounded-3xl p-5 flex flex-col h-[600px] shadow-2xl">
+          <div class="flex items-center justify-between pb-3.5 border-b border-slate-800">
+            <h3 class="font-bold text-slate-200 text-base flex items-center gap-2">
+              <i class="fa-solid fa-comments text-blue-400"></i> Live-Stream Chat
+            </h3>
+            <span class="text-xs bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/30 font-semibold">Aktiver Chat</span>
+          </div>
+
+          <!-- Chat Messages Container -->
+          <div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 py-4 pr-1 text-sm no-scrollbar">
+            <div class="text-center text-slate-500 my-8 text-xs">Chat bereit. Starte den Stream, damit Zuschauer chatten & spenden!</div>
+          </div>
+
+          <!-- Large Accessible User Chat Input Form -->
+          <form onsubmit="handleUserChat(event)" class="mt-3 flex gap-2 pt-3 border-t border-slate-800">
+            <input type="text" id="user-chat-input" placeholder="Schreibe eine Chatnachricht..." class="flex-1 bg-slate-800 border border-slate-700 rounded-2xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-blue-500 transition shadow-inner">
+            <button type="submit" class="touch-btn bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 rounded-2xl text-sm shadow-lg shadow-blue-600/30 transition">
+              <i class="fa-solid fa-paper-plane text-base"></i>
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- AI ADVISOR TAB -->
+    <section id="tab-ai" class="tab-content space-y-6 hidden">
+      <div class="bg-gradient-to-br from-slate-900 via-purple-950/40 to-slate-900 border border-purple-500/30 rounded-3xl p-6 sm:p-8 space-y-5 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+          <div class="flex items-center gap-3">
+            <div class="bg-purple-600/20 text-purple-400 border border-purple-500/30 p-3 rounded-2xl text-xl">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </div>
+            <div>
+              <h2 class="text-xl font-black text-white">Gemini AI Finanz- & Lifestyle-Berater</h2>
+              <p class="text-xs sm:text-sm text-slate-400">Frage den KI-Assistenten nach Kontostrategie oder Autokauf-Tipps.</p>
+            </div>
+          </div>
+          <button onclick="askAIBalanceReview()" class="touch-btn bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-2xl border border-purple-500/40 transition">
+            <i class="fa-solid fa-chart-line mr-1.5"></i> Konto analysieren
+          </button>
+        </div>
+
+        <div id="ai-chat-history" class="space-y-4 h-[400px] overflow-y-auto pr-2 text-sm no-scrollbar bg-slate-950/70 p-5 rounded-3xl border border-slate-800/80 shadow-inner">
+          <div class="flex items-start gap-3 bg-purple-950/20 border border-purple-500/20 p-4 rounded-2xl">
+            <div class="bg-purple-600 text-white w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-bold text-xs">AI</div>
+            <div class="text-slate-200 leading-relaxed">
+              Hallo! Ich bin dein persönlicher KI-Finanzberater. Wie kann ich dir heute bei deinem PayPal-Guthaben oder deiner Stream-Karriere helfen?
+            </div>
+          </div>
+        </div>
+
+        <form onsubmit="handleAIAdvisorSubmit(event)" class="flex gap-2">
+          <input type="text" id="ai-prompt-input" placeholder="Z. B. Welches Auto sollte ich als nächstes kaufen?..." class="flex-1 bg-slate-800 border border-slate-700 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-purple-500 transition shadow-inner">
+          <button type="submit" class="touch-btn bg-purple-600 hover:bg-purple-500 text-white font-bold px-7 rounded-2xl text-sm shadow-lg shadow-purple-600/30 transition">
+            <i class="fa-solid fa-paper-plane mr-2"></i> Senden
+          </button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 z-40 md:hidden px-2 py-2">
+    <div class="flex justify-around items-center">
+      <button onclick="switchTab('dashboard')" id="nav-dashboard" class="touch-btn flex-col gap-1 text-blue-400 font-bold text-[11px] py-1 px-3 rounded-2xl transition">
+        <i class="fa-solid fa-wallet text-lg"></i>
+        <span>Übersicht</span>
+      </button>
+      <button onclick="switchTab('clothing')" id="nav-clothing" class="touch-btn flex-col gap-1 text-slate-400 font-medium text-[11px] py-1 px-3 rounded-2xl transition">
+        <i class="fa-solid fa-shirt text-lg"></i>
+        <span>Klamotten</span>
+      </button>
+      <button onclick="switchTab('garage')" id="nav-garage" class="touch-btn flex-col gap-1 text-slate-400 font-medium text-[11px] py-1 px-3 rounded-2xl transition">
+        <i class="fa-solid fa-car text-lg"></i>
+        <span>Autohaus</span>
+      </button>
+      <button onclick="switchTab('live')" id="nav-live" class="touch-btn flex-col gap-1 text-slate-400 font-medium text-[11px] py-1 px-3 rounded-2xl transition relative">
+        <span class="absolute top-1 right-3 w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+        <i class="fa-solid fa-video text-lg"></i>
+        <span>Live</span>
+      </button>
+      <button onclick="switchTab('ai')" id="nav-ai" class="touch-btn flex-col gap-1 text-slate-400 font-medium text-[11px] py-1 px-3 rounded-2xl transition">
+        <i class="fa-solid fa-wand-magic-sparkles text-lg"></i>
+        <span>AI Advisor</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MODAL: Artikel Einstellen -->
+  <div id="modal-sell" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-white text-lg flex items-center gap-2">
+          <i class="fa-solid fa-shirt text-emerald-500"></i> Artikel einstellen
+        </h3>
+        <button onclick="closeModal('modal-sell')" class="touch-btn text-slate-400 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleCreateListing(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block text-slate-400 mb-1.5 font-semibold text-sm">Marken-Artikel</label>
+          <select id="item-preset" onchange="generateAIItemDescription()" class="w-full bg-slate-800 border border-slate-700 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-emerald-500 text-sm">
+            <option value="Nike Tech Fleece suit">Nike Tech Fleece Trainingsanzug</option>
+            <option value="Air Jordan 1 High OG">Air Jordan 1 High Retro</option>
+            <option value="Supreme Box Logo Hoodie">Supreme Box Logo Hoodie</option>
+            <option value="Trapstar Irongate Jacket">Trapstar Irongate Winterjacke</option>
+            <option value="Balenciaga Mode Cap">Balenciaga Basecap</option>
+            <option value="Off-White Out Of Office">Off-White Sneaker</option>
+            <option value="Carhartt Detroit Jacket">Carhartt WIP Jacket</option>
+            <option value="Yeezy Boost 350 V2">Yeezy Boost 350 V2</option>
+          </select>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-slate-400 font-semibold text-sm">Marketingbeschreibung</label>
+            <span id="ai-desc-loading" class="text-[11px] text-purple-400 hidden"><i class="fa-solid fa-spinner animate-spin"></i> Generiere...</span>
+          </div>
+          <div id="ai-generated-desc" class="p-3.5 bg-slate-800/80 rounded-2xl border border-slate-700 text-slate-300 italic text-xs">
+            Wähle einen Artikel...
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-400 mb-1.5 font-semibold text-sm">Verkaufspreis (€)</label>
+          <input type="number" id="item-price" min="10" max="5000" value="180" required class="w-full bg-slate-800 border border-slate-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <button type="submit" class="touch-btn w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl text-sm shadow-lg shadow-emerald-600/30 transition">
+          Jetzt auf Marketplace listen
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Guthaben aufladen -->
+  <div id="modal-money" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-white text-lg flex items-center gap-2">
+          <i class="fa-solid fa-coins text-amber-500"></i> Guthaben aufladen
+        </h3>
+        <button onclick="closeModal('modal-money')" class="touch-btn text-slate-400 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleDepositMoney(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block text-slate-400 mb-1.5 font-semibold text-sm">Betrag hinzufügen (€)</label>
+          <input type="number" id="deposit-amount" min="1" max="1000000" value="500" required class="w-full bg-slate-800 border border-slate-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-amber-500">
+        </div>
+
+        <button type="submit" class="touch-btn w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-sm shadow-lg shadow-blue-600/30 transition">
+          Guthaben gutschreiben
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Audio Sound Effects
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playNotificationSound() {
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+      } catch (e) {
+        console.log('Audio error:', e);
+      }
+    }
+
+    // App State Variables
+    let balance = 12450.00;
+    let soldCount = 14;
+    let totalDonations = 850.00;
+    let sessionDonations = 0.00;
+    let isLive = false;
+    let chatTimer = null;
+    let donationTimer = null;
+
+    const REAL_NAMES = [
+      "Maximilian S.", "Lisa M.", "Tim H.", "Kevin_99", "Sarah_M", "Lukas_R", 
+      "Kilian_Official", "Anna_K", "Jonas_B", "Leon_D", "Laura_P", "Tobias_W", 
+      "GamerBoy_02", "Felix_M", "Mia_S", "Nico_H", "Sven_T", "Marcel_K"
+    ];
+
+    const STREAM_CHAT_MESSAGES = [
+      "Bruder der Sound ist so krass!",
+      "Was ein Auto ey 🔥",
+      "Gönn mir mal auch so ein Kontostand haha",
+      "Wer ist auch nur wegen den Autos hier?",
+      "Einfach Legende der Stream",
+      "Kannst du mich grüßen?",
+      "Wie viel kostet der AMG?",
+      "Ehrenmann 💪",
+      "Zu wild einfach",
+      "Einfach der beste Streamer zur Zeit"
+    ];
+
+    const CAR_CATALOG = [
+      { id: 1, name: "VW Golf 8 GTI", price: 38500, hp: "245 PS", img: "🏎️" },
+      { id: 2, name: "BMW M3 Competition", price: 98000, hp: "510 PS", img: "🏎️" },
+      { id: 3, name: "BMW M4 CSL", price: 165000, hp: "550 PS", img: "🏎️" },
+      { id: 4, name: "Audi RS6 Avant", price: 128000, hp: "600 PS", img: "🏎️" },
+      { id: 5, name: "Audi RS7 Sportback", price: 135000, hp: "600 PS", img: "🏎️" },
+      { id: 6, name: "Mercedes-AMG GT R", price: 175000, hp: "585 PS", img: "🏎️" },
+      { id: 7, name: "Mercedes-AMG C63 S", price: 92000, hp: "510 PS", img: "🏎️" },
+      { id: 8, name: "Porsche 911 GT3 RS", price: 275000, hp: "525 PS", img: "🏎️" },
+      { id: 9, name: "Porsche Taycan Turbo S", price: 190000, hp: "761 PS", img: "🏎️" },
+      { id: 10, name: "Lamborghini Huracán", price: 240000, hp: "640 PS", img: "🏎️" },
+      { id: 11, name: "Lamborghini Urus", price: 260000, hp: "666 PS", img: "🏎️" },
+      { id: 12, name: "Ferrari SF90 Stradale", price: 430000, hp: "1000 PS", img: "🏎️" },
+      { id: 13, name: "McLaren 720S", price: 280000, hp: "720 PS", img: "🏎️" },
+      { id: 14, name: "Rolls-Royce Cullinan", price: 390000, hp: "571 PS", img: "🏎️" },
+      { id: 15, name: "Bugatti Chiron Sport", price: 3200000, hp: "1500 PS", img: "🏎️" },
+      { id: 16, name: "Koenigsegg Jesko", price: 3800000, hp: "1600 PS", img: "🏎️" }
+    ];
+
+    let myGarage = [
+      { id: 1, name: "VW Golf 8 GTI", price: 38500, hp: "245 PS" },
+      { id: 2, name: "BMW M3 Competition", price: 98000, hp: "510 PS" }
+    ];
+
+    let clothingListings = [
+      { id: 101, title: "Nike Tech Fleece Trainingsanzug", price: 140, time: 35 },
+      { id: 102, title: "Air Jordan 1 High Retro", price: 220, time: 50 }
+    ];
+
+    let activities = [
+      { title: "Zahlung erhalten von Lisa M.", amount: "+ 120,00 €", type: "in", date: "Vor 10 Min." },
+      { title: "Echtzeit-Spende von GamerBoy_02", amount: "+ 15,00 €", type: "in", date: "Vor 25 Min." },
+      { title: "Kauf bei Autohaus Performance", amount: "- 38.500,00 €", type: "out", date: "Gestern" }
+    ];
+
+    // Helper Functions
+    function formatEUR(val) {
+      return val.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    }
+
+    function updateUI() {
+      document.getElementById('main-balance').innerText = formatEUR(balance);
+      document.getElementById('header-balance').innerText = formatEUR(balance);
+      document.getElementById('stat-sold-count').innerText = soldCount;
+      document.getElementById('stat-donations-total').innerText = formatEUR(totalDonations);
+      document.getElementById('stat-cars-count').innerText = myGarage.length;
+      document.getElementById('garage-count-badge').innerText = myGarage.length;
+
+      renderActivities();
+      renderClothingGrid();
+      renderCarsDealership();
+      renderGarage();
+    }
+
+    function showToast(title, message, isSuccess = true) {
+      playNotificationSound();
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto bg-slate-900 border ${isSuccess ? 'border-emerald-500/50 text-emerald-400' : 'border-blue-500/50 text-blue-400'} p-4 rounded-2xl shadow-2xl flex items-start gap-3 transition-all duration-300 transform translate-y-2`;
+      
+      toast.innerHTML = `
+        <div class="${isSuccess ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'} p-2 rounded-xl text-lg">
+          <i class="fa-solid ${isSuccess ? 'fa-circle-check' : 'fa-bell'}"></i>
+        </div>
+        <div class="flex-1">
+          <h4 class="font-bold text-sm text-white">${title}</h4>
+          <p class="text-xs text-slate-300 mt-0.5">${message}</p>
+        </div>
+      `;
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    async function callGeminiAPI(systemInstruction, userQuery, retries = 3, delay = 1000) {
+      const apiKey = "";
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+      
+      const payload = {
+        contents: [{ parts: [{ text: userQuery }] }],
+        systemInstruction: { parts: [{ text: systemInstruction }] }
+      };
+
+      for (let i = 0; i < retries; i++) {
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const result = await response.json();
+          const candidate = result.candidates?.[0];
+          if (candidate && candidate.content?.parts?.[0]?.text) {
+            return candidate.content.parts[0].text;
+          }
+        } catch (err) {
+          if (i === retries - 1) throw err;
+          await new Promise(res => setTimeout(res, delay * Math.pow(2, i)));
+        }
+      }
+      return null;
+    }
+
+    async function generateAIItemDescription() {
+      const itemTitle = document.getElementById('item-preset').value;
+      const descBox = document.getElementById('ai-generated-desc');
+      const loader = document.getElementById('ai-desc-loading');
+
+      loader.classList.remove('hidden');
+      descBox.innerText = "Generiere Beschreibung mit Gemini AI...";
+
+      try {
+        const prompt = `Schreibe eine kurze, coole und verkaufsfördernde Beschreibung (auf Deutsch, max. 2 Sätze) für den Luxus-Artikel "${itemTitle}" für ein Online-Kleinanzeigenportal.`;
+        const aiText = await callGeminiAPI("Du bist ein genialer Marketing-Experte für Streetwear und Luxusartikel.", prompt);
+        descBox.innerText = aiText || "Exklusiver Zustand, direkt abzugeben!";
+      } catch (e) {
+        descBox.innerText = "Limitierte Auflage, Top Zustand.";
+      } finally {
+        loader.classList.add('hidden');
+      }
+    }
+
+    async function handleAIAdvisorSubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById('ai-prompt-input');
+      const query = input.value.trim();
+      if (!query) return;
+
+      const historyBox = document.getElementById('ai-chat-history');
+      
+      historyBox.innerHTML += `
+        <div class="flex items-start gap-3 justify-end">
+          <div class="bg-blue-600 text-white p-3.5 rounded-2xl max-w-[80%] leading-relaxed">
+            ${query}
+          </div>
+        </div>
+      `;
+      input.value = '';
+      historyBox.scrollTop = historyBox.scrollHeight;
+
+      const loaderId = 'loader-' + Date.now();
+      historyBox.innerHTML += `
+        <div id="${loaderId}" class="flex items-start gap-3">
+          <div class="bg-purple-600 text-white w-7 h-7 rounded-xl flex items-center justify-center shrink-0 font-bold text-xs">AI</div>
+          <div class="bg-purple-950/20 border border-purple-500/20 p-3.5 rounded-2xl text-slate-300 italic">
+            <i class="fa-solid fa-spinner animate-spin mr-2"></i> Gemini denkt nach...
+          </div>
+        </div>
+      `;
+      historyBox.scrollTop = historyBox.scrollHeight;
+
+      try {
+        const garageListStr = myGarage.map(c => c.name).join(', ') || 'Keine';
+        const context = `Der User hat aktuell ${formatEUR(balance)} PayPal Guthaben, ${soldCount} verkaufte Artikel und folgende Autos in seiner Garage: ${garageListStr}.`;
+        const aiResponse = await callGeminiAPI(`Du bist ein cooler, humorvoller Finanzberater und Streamer-Coach für eine High-End PayPal Simulation. Antworte auf Deutsch kurz, prägnant und unterhaltsam. Kontext: ${context}`, query);
+        
+        document.getElementById(loaderId).remove();
+        historyBox.innerHTML += `
+          <div class="flex items-start gap-3">
+            <div class="bg-purple-600 text-white w-7 h-7 rounded-xl flex items-center justify-center shrink-0 font-bold text-xs">AI</div>
+            <div class="text-slate-200 bg-purple-950/20 border border-purple-500/20 p-3.5 rounded-2xl max-w-[80%] leading-relaxed">
+              ${aiResponse}
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        document.getElementById(loaderId).remove();
+        historyBox.innerHTML += `
+          <div class="text-red-400 text-center">Fehler bei der KI-Anfrage. Bitte versuche es erneut.</div>
+        `;
+      }
+      historyBox.scrollTop = historyBox.scrollHeight;
+    }
+
+    async function askAIBalanceReview() {
+      switchTab('ai');
+      const input = document.getElementById('ai-prompt-input');
+      input.value = "Analysiere mein aktuelles PayPal-Guthaben und gib mir Tipps, wie ich mein Vermögen verdoppeln kann!";
+      const form = input.closest('form');
+      if (form) form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    }
+
+    function renderActivities() {
+      const list = document.getElementById('activity-list');
+      list.innerHTML = activities.map(act => `
+        <div class="flex items-center justify-between p-3.5 rounded-2xl bg-slate-800/40 border border-slate-800 shadow-sm">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl ${act.type === 'in' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-700/30 text-slate-400'} flex items-center justify-center font-bold">
+              <i class="fa-solid ${act.type === 'in' ? 'fa-arrow-down-left' : 'fa-arrow-up-right'}"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-200 text-sm">${act.title}</div>
+              <div class="text-[11px] text-slate-500">${act.date}</div>
+            </div>
+          </div>
+          <div class="font-bold text-sm ${act.type === 'in' ? 'text-emerald-400' : 'text-slate-200'}">
+            ${act.amount}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderClothingGrid() {
+      const grid = document.getElementById('clothing-items-grid');
+      if (clothingListings.length === 0) {
+        grid.innerHTML = `<div class="col-span-full text-center text-slate-500 py-8 text-xs">Keine aktiven Verkäufe. Stelle jetzt ein Kleidungsstück ein!</div>`;
+        return;
+      }
+
+      grid.innerHTML = clothingListings.map(item => `
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between relative overflow-hidden shadow-xl">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+              <i class="fa-solid fa-spinner animate-spin mr-1"></i> Käufer sucht...
+            </span>
+            <span class="text-xs text-slate-400 font-mono">${item.time}s</span>
+          </div>
+
+          <div class="space-y-1.5 mb-4">
+            <h4 class="font-bold text-slate-100 text-sm">${item.title}</h4>
+            <div class="text-xl font-extrabold text-white">${formatEUR(item.price)}</div>
+          </div>
+
+          <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+            <div class="bg-emerald-500 h-2 rounded-full transition-all duration-1000" style="width: ${(item.time / 60) * 100}%"></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderCarsDealership() {
+      const grid = document.getElementById('cars-dealership-grid');
+      grid.innerHTML = CAR_CATALOG.map(car => `
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between space-y-4 hover:border-slate-700 transition shadow-xl">
+          <div class="flex items-center justify-between">
+            <span class="text-4xl">${car.img}</span>
+            <span class="text-xs bg-slate-800 text-slate-300 font-bold px-3 py-1.5 rounded-xl">${car.hp}</span>
+          </div>
+          <div>
+            <h4 class="font-bold text-white text-base">${car.name}</h4>
+            <div class="text-lg font-extrabold text-emerald-400 mt-1">${formatEUR(car.price)}</div>
+          </div>
+          <button onclick="buyCar(${car.id})" class="touch-btn w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-xs shadow-md transition active:scale-95">
+            Auto Kaufen
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function renderGarage() {
+      const grid = document.getElementById('user-garage-grid');
+      if (myGarage.length === 0) {
+        grid.innerHTML = `<div class="col-span-full text-center text-slate-500 py-8 text-xs">Deine Garage ist leer. Kaufe dein erstes Auto im Autohaus!</div>`;
+        return;
+      }
+
+      grid.innerHTML = myGarage.map(car => `
+        <div class="bg-slate-900 border border-blue-500/20 rounded-3xl p-5 flex flex-col justify-between space-y-4 relative overflow-hidden shadow-xl">
+          <div class="flex items-center justify-between">
+            <span class="text-4xl">🏎️</span>
+            <span class="text-xs bg-emerald-500/20 text-emerald-400 font-bold px-3 py-1.5 rounded-xl">Im Besitz</span>
+          </div>
+          <div>
+            <h4 class="font-bold text-white text-base">${car.name}</h4>
+            <p class="text-xs text-slate-400 mt-1">${car.hp} • Wert: ${formatEUR(car.price)}</p>
+          </div>
+          <button onclick="switchTab('live')" class="touch-btn w-full bg-red-600/20 hover:bg-red-600/40 text-red-400 font-bold border border-red-500/30 rounded-2xl text-xs transition active:scale-95">
+            <i class="fa-solid fa-video mr-1.5"></i> Im Stream zeigen
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // Marketplace automatic buyer simulation loop
+    setInterval(() => {
+      if (clothingListings.length === 0) return;
+
+      clothingListings.forEach((item, index) => {
+        item.time -= 1;
+        if (item.time <= 0) {
+          const buyer = REAL_NAMES[Math.floor(Math.random() * REAL_NAMES.length)];
+          balance += item.price;
+          soldCount += 1;
+
+          activities.unshift({
+            title: `Artikel gekauft von ${buyer}`,
+            amount: `+ ${formatEUR(item.price)}`,
+            type: 'in',
+            date: 'Gerade eben'
+          });
+
+          showToast('Artikel verkauft! 🎉', `${buyer} hat deinen "${item.title}" für ${formatEUR(item.price)} gekauft!`);
+          clothingListings.splice(index, 1);
+          updateUI();
+        }
+      });
+      renderClothingGrid();
+    }, 1000);
+
+    function buyCar(carId) {
+      const car = CAR_CATALOG.find(c => c.id === carId);
+      if (!car) return;
+
+      if (balance < car.price) {
+        showToast('Guthaben unzureichend!', `Du benötigst ${formatEUR(car.price)}, hast aber nur ${formatEUR(balance)}.`, false);
+        return;
+      }
+
+      balance -= car.price;
+      myGarage.push(car);
+
+      activities.unshift({
+        title: `Kauf von ${car.name}`,
+        amount: `- ${formatEUR(car.price)}`,
+        type: 'out',
+        date: 'Gerade eben'
+      });
+
+      showToast('Gratulation zum Neuwagen! 🚗', `Du hast den ${car.name} erfolgreich gekauft.`);
+      updateUI();
+    }
+
+    function toggleLiveStream() {
+      isLive = !isLive;
+      const btn = document.getElementById('toggle-live-btn');
+      const badge = document.getElementById('live-badge');
+      const vBadge = document.getElementById('viewer-badge');
+      const title = document.getElementById('live-screen-title');
+      const desc = document.getElementById('live-screen-desc');
+      const icon = document.getElementById('live-status-icon');
+
+      if (isLive) {
+        btn.innerText = 'Stream Beenden';
+        btn.classList.replace('bg-red-600', 'bg-slate-700');
+        btn.classList.replace('hover:bg-red-500', 'hover:bg-slate-600');
+        badge.classList.remove('hidden');
+        badge.classList.add('flex');
+        vBadge.classList.remove('hidden');
+        vBadge.classList.add('flex');
+
+        title.innerText = "STREAM IS LIVE";
+        desc.innerText = "Zuschauer schauen dir live zu!";
+        icon.classList.remove('text-red-500', 'bg-red-600/20');
+        icon.classList.add('text-emerald-400', 'bg-emerald-500/20');
+
+        showToast('Stream gestartet 🔴', 'Dein Live-Chat & Spenden-Modus ist online!');
+        startChatSimulation();
+      } else {
+        btn.innerText = 'Live Gehen';
+        btn.classList.replace('bg-slate-700', 'bg-red-600');
+        btn.classList.replace('hover:bg-slate-600', 'hover:bg-red-500');
+        badge.classList.add('hidden');
+        vBadge.classList.add('hidden');
+
+        title.innerText = "Stream ist offline";
+        desc.innerText = "Starte jetzt den Live-Stream, um Zusehern deine Klamotten & Autos zu zeigen!";
+        icon.classList.add('text-red-500', 'bg-red-600/20');
+        icon.classList.remove('text-emerald-400', 'bg-emerald-500/20');
+
+        clearInterval(chatTimer);
+        clearInterval(donationTimer);
+      }
+    }
+
+    function startChatSimulation() {
+      const chatBox = document.getElementById('chat-messages');
+      chatBox.innerHTML = '';
+
+      chatTimer = setInterval(() => {
+        if (!isLive) return;
+        const name = REAL_NAMES[Math.floor(Math.random() * REAL_NAMES.length)];
+        const msg = STREAM_CHAT_MESSAGES[Math.floor(Math.random() * STREAM_CHAT_MESSAGES.length)];
+        appendChatMessage(name, msg);
+        document.getElementById('viewer-count').innerText = (1400 + Math.floor(Math.random() * 500)).toLocaleString();
+      }, 3500);
+
+      donationTimer = setInterval(() => {
+        if (!isLive) return;
+        triggerDonation();
+      }, 15000);
+    }
+
+    function triggerDonation() {
+      const donor = REAL_NAMES[Math.floor(Math.random() * REAL_NAMES.length)];
+      const amount = [5, 10, 15, 20, 25, 50, 100][Math.floor(Math.random() * 7)];
+      const msgs = ["Gönn dir Bro!", "Für den nächsten AMG!", "Einfach der krasseste Stream!", "Weiter so!", "Grüß mich mal!"];
+      const msg = msgs[Math.floor(Math.random() * msgs.length)];
+
+      balance += amount;
+      totalDonations += amount;
+      sessionDonations += amount;
+
+      document.getElementById('session-donations-total').innerText = formatEUR(sessionDonations);
+
+      activities.unshift({
+        title: `Spende im Stream von ${donor}`,
+        amount: `+ ${formatEUR(amount)}`,
+        type: 'in',
+        date: 'Gerade eben'
+      });
+
+      const alert = document.getElementById('donation-alert');
+      document.getElementById('alert-username').innerText = donor;
+      document.getElementById('alert-amount').innerText = `spendet ${formatEUR(amount)}!`;
+      document.getElementById('alert-message').innerText = `"${msg}"`;
+
+      alert.classList.remove('hidden');
+      setTimeout(() => alert.classList.add('hidden'), 5000);
+
+      const chatBox = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = "p-3 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-semibold text-sm shadow";
+      div.innerHTML = `<i class="fa-solid fa-coins mr-1.5"></i> <strong>${donor}</strong> hat <strong>${formatEUR(amount)}</strong> gespendet: "${msg}"`;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      showToast(`Spende von ${donor}! 💰`, `${donor} hat dir ${formatEUR(amount)} gespendet.`);
+      updateUI();
+    }
+
+    function appendChatMessage(author, text) {
+      const chatBox = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = "flex items-start gap-2.5 bg-slate-800/60 p-3 rounded-2xl border border-slate-800 shadow-sm";
+      div.innerHTML = `
+        <span class="font-bold text-blue-400 shrink-0">${author}:</span>
+        <span class="text-slate-200 break-all">${text}</span>
+      `;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function handleUserChat(e) {
+      e.preventDefault();
+      const input = document.getElementById('user-chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+      appendChatMessage('Du (Streamer)', text);
+      input.value = '';
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+      ['dashboard', 'clothing', 'garage', 'live', 'ai'].forEach(nav => {
+        const btn = document.getElementById(`nav-${nav}`);
+        if (!btn) return;
+        if (nav === tabId) {
+          btn.classList.replace('text-slate-400', 'text-blue-400');
+          btn.classList.add('font-bold');
+        } else {
+          btn.classList.replace('text-blue-400', 'text-slate-400');
+          btn.classList.remove('font-bold');
+        }
+      });
+    }
+
+    function switchCarSubtab(sub) {
+      if (sub === 'shop') {
+        document.getElementById('car-subtab-shop').classList.remove('hidden');
+        document.getElementById('car-subtab-mine').classList.add('hidden');
+        document.getElementById('subtab-btn-shop').classList.add('border-blue-500', 'text-blue-400');
+        document.getElementById('subtab-btn-mine').classList.remove('border-blue-500', 'text-blue-400');
+      } else {
+        document.getElementById('car-subtab-shop').classList.add('hidden');
+        document.getElementById('car-subtab-mine').classList.remove('hidden');
+        document.getElementById('subtab-btn-mine').classList.add('border-blue-500', 'text-blue-400');
+        document.getElementById('subtab-btn-shop').classList.remove('border-blue-500', 'text-blue-400');
+      }
+    }
+
+    function openSellModal() { 
+      document.getElementById('modal-sell').classList.replace('hidden', 'flex');
+      generateAIItemDescription();
+    }
+    function openMoneyModal() { document.getElementById('modal-money').classList.replace('hidden', 'flex'); }
+    function closeModal(id) { document.getElementById(id).classList.replace('flex', 'hidden'); }
+
+    function handleCreateListing(e) {
+      e.preventDefault();
+      const title = document.getElementById('item-preset').value;
+      const price = parseFloat(document.getElementById('item-price').value) || 100;
+      const time = Math.floor(Math.random() * 30) + 30;
+
+      clothingListings.push({ id: Date.now(), title, price, time });
+      closeModal('modal-sell');
+      showToast('Artikel gelistet! 🏷️', `Dein "${title}" steht jetzt für ${formatEUR(price)} zum Verkauf.`);
+      renderClothingGrid();
+    }
+
+    function handleDepositMoney(e) {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById('deposit-amount').value) || 100;
+      balance += amount;
+      activities.unshift({
+        title: 'Manuelle Einzahlung',
+        amount: `+ ${formatEUR(amount)}`,
+        type: 'in',
+        date: 'Gerade eben'
+      });
+      closeModal('modal-money');
+      showToast('Guthaben aufgeladen!', `${formatEUR(amount)} wurden deinem PayPal Konto gutschrieben.`);
+      updateUI();
+    }
+
+    window.onload = function() {
+      updateUI();
+    };
+  </script>
+</body>
+</html>
